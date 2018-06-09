@@ -17,7 +17,7 @@
       <img class="pic" src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRnALaYCcBehqeLKf7jKke795RvUJYY31PkrCwYO3i1DPdwJPKJsg">
       <h1 id="heading" class="display-4">New York Times Search</h1>
     </div>
-
+    <br>
     <form id="formBox">
       <div class="form-group">
         <label id="search" for="SearchTerms">Search Terms:</label>
@@ -49,7 +49,7 @@
         <label id="end" for="EndYear">End Year(Optional):</label>
         <input type="text" class="form-control" id="EndYear" placeholder="End Year">
       </div>
-        
+        <br>
       <button type="button" class="btn btn-outline-primary" id="SearchBtn">Search</button>
       <button type="button" class="btn btn-outline-secondary" id="ResetBtn">Clear Results</button>
     </form>
@@ -68,7 +68,8 @@
 
 
   
- <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+ 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
   
   <script type="text/javascript">
 
@@ -79,46 +80,97 @@
     
     function displayArticleTags() {
 
-console.log("searchTerms: " + searchTerms);
-console.log("numRecords: " + numRecords);
-console.log("startYear: " + startYear);
-console.log("endYear: " + endYear);
+      if ( checkParams() ) {
 
+        var url = "https://api.nytimes.com/svc/search/v2/articlesearch.json";
+        url += "?api-key=1c2fd9472d644771b63f1eff21ef8c4a";
+        url += "&q=" + searchTerms;
+        url += "&fq=source%3A(%22The%20New%20York%20Times%22)";
 
+        if ( startYear.length > 0 ) {
+          url += "&begin_date=" + startYear + "0101";
+        }
 
+        if ( endYear.length > 0 ) {
+          url += "&end_date=" + endYear + "1231";
+        }
 
-var url = "https://api.nytimes.com/svc/search/v2/articlesearch.json";
-url += '?' + $.param({
-  'api-key': "1c2fd9472d644771b63f1eff21ef8c4a",
-  'q': "election",
-  'fq': "source:(\"The New York Times\")",
-  'begin_date': "20180102",
-  'end_date': "20180607"
-});
+        $.ajax({  url: url,
+                  method: 'GET',
+        }).done(function(result) {
+console.log(result);
 
+          // build display here 
+          var loopMax = 0;
+          let response = result.response.docs;
 
-$.ajax({
-  url: url,
-  method: 'GET',
-}).done(function(result) {
-  let response = result.response.docs;
-  console.log(result);
-  console.log(response[0].byline.original);
-  console.log(response[0].headline.main);
-  console.log(response[0].pub_date);
-  console.log(response[0].web_url);
-  console.log(response[3].section_name);
-  console.log(response.length);
-  
+          if ( response.length > numRecords ) {
+            loopMax = numRecords;
+          } else {
+            loopMax = response.length;
+          }
 
-}).fail(function(err) {
-   throw err;
-}
+          if ( loopMax === 0 ) {
+            $("#articleTags").html("<h2><em>No results found.</em></h2>");
+          } else {
 
-);
+            var newDiv;
+            var divHTML = "";
+console.log(loopMax);
+            for ( var i = 0; i < loopMax; i++ ) {
+/*  console.log(response[i].byline.original);
+  console.log(response[i].headline.main);
+  console.log(response[i].pub_date);
+  console.log(response[i].web_url);
+  console.log(response[i].section_name);
+  console.log(response.length); */
+console.log("i: " + i);
 
+              newDiv = $("<div>");
+            
+              divHTML = (i+1) + " - " + response[i].headline.main + "<br>";
+              divHTML += response[i].byline.original + "<br>";
+            
+              if ( response[i].section_name != undefined) {
+                divHTML += "Section: " + response[i].section_name + "<br>";
+              }
+
+              divHTML += response[i].pub_date + "<br>";
+              divHTML += "<a href='" + response[i].web_url + "' target='_blank'>";
+              divHTML += response[i].web_url + "</a>";
+
+console.log(divHTML);
+
+              newDiv.html(divHTML);
+              newDiv.addClass("articleStyle");
+              $("#articleTags").append(newDiv);
+            }
+          }
+        }).fail(function(err) {
+          throw err;
+        });
+
+      }
 
     }
+
+    function checkParams() {
+
+      if ( numRecords<1 || numRecords>10 ) {
+        numRecords = 1;
+      }
+
+      if ( !startYear.match("^(19|20)[0-9][0-9]") ) {
+        startYear = "";
+      }
+
+      if ( !endYear.match("^(19|20)[0-9][0-9]") ) {
+        endYear = "";
+      }
+
+      return true;
+    }
+
 
     $("select").change( function () {
       numRecords=$("#NumRecords").val();
@@ -145,6 +197,8 @@ $.ajax({
       $("#NumRecords").val(numRecords);
       $("#StartYear").val(startYear);
       $("#EndYear").val(endYear);
+
+      $("#articleTags").empty();
     });
 
   </script>
